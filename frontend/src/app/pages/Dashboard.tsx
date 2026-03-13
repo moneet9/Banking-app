@@ -127,7 +127,7 @@ export default function Dashboard() {
             <h2 className="text-lg font-semibold text-gray-900">Recent Transactions</h2>
             <button 
               className="text-sm text-[#0066FF] font-medium"
-              onClick={() => navigate('/transactions')}
+              onClick={() => navigate('/passbook')}
             >
               See All
             </button>

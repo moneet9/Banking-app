@@ -19,12 +19,15 @@ import StaffDashboard from './pages/staff/StaffDashboard';
 import StaffLoans from './pages/staff/StaffLoans';
 import StaffAccounts from './pages/staff/StaffAccounts';
 import StaffReports from './pages/staff/StaffReports';
+import StaffPassbook from './pages/staff/StaffPassbook';
 
 // Manager imports
 import ManagerLogin from './pages/manager/ManagerLogin';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
 import ManagerLoans from './pages/manager/ManagerLoans';
 import ManagerReports from './pages/manager/ManagerReports';
+import ManagerPassbookLogs from './pages/manager/ManagerPassbookLogs';
+import ManagerStaffLogs from './pages/manager/ManagerStaffLogs';
 import { getUserRole, isAuthenticated } from './services/bankingApi';
 
 function RequireAuth() {
@@ -83,6 +86,10 @@ export const router = createBrowserRouter([
                 element: <Profile />,
               },
               {
+                path: 'passbook',
+                element: <Transactions />,
+              },
+              {
                 path: 'transactions',
                 element: <Transactions />,
               },
@@ -124,6 +131,10 @@ export const router = createBrowserRouter([
             path: 'reports',
             element: <StaffReports />,
           },
+          {
+            path: 'passbook',
+            element: <StaffPassbook />,
+          },
         ],
       },
     ],
@@ -155,6 +166,18 @@ export const router = createBrowserRouter([
           {
             path: 'reports',
             element: <ManagerReports />,
+          },
+          {
+            path: 'passbook-logs',
+            element: <ManagerPassbookLogs />,
+          },
+          {
+            path: 'staff-logs',
+            element: <ManagerStaffLogs />,
+          },
+          {
+            path: 'logs',
+            element: <Navigate to="/manager/passbook-logs" replace />,
           },
         ],
       },

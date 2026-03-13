@@ -3,6 +3,7 @@ import Loan from '../models/Loan.js';
 import Transaction from '../models/Transaction.js';
 import CashRequest from '../models/CashRequest.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { buildPassbookEntriesFromTransactions, transactionMatchesQuery } from '../utils/passbook.js';
 
 const router = express.Router();
 
@@ -71,6 +72,28 @@ router.get('/transactions', async (req, res) => {
     .lean();
 
   return res.json({ success: true, data: items });
+});
+
+router.get('/passbook', async (req, res) => {
+  const { q = '', limit = 200 } = req.query;
+  const normalizedLimit = Math.min(Math.max(Number(limit) || 200, 1), 500);
+
+  const transactions = await Transaction.find({ userId: req.user._id })
+    .sort({ timestamp: -1 })
+    .limit(normalizedLimit)
+    .lean();
+
+  const entries = buildPassbookEntriesFromTransactions(transactions, req.user.balance)
+    .filter((transaction) => transactionMatchesQuery(transaction, q));
+
+  return res.json({
+    success: true,
+    data: {
+      customer: req.user.toSafeObject(),
+      balance: req.user.balance,
+      entries,
+    },
+  });
 });
 
 router.post('/transfers', async (req, res) => {

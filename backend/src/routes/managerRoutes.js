@@ -1,8 +1,11 @@
 import express from 'express';
 import Loan from '../models/Loan.js';
 import Transaction from '../models/Transaction.js';
+import ActivityLog from '../models/ActivityLog.js';
 import User from '../models/User.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { createActivityLog } from '../utils/activityLogger.js';
+import { buildPassbookEntriesFromTransactions, transactionMatchesQuery } from '../utils/passbook.js';
 
 const router = express.Router();
 
@@ -29,6 +32,34 @@ function percentChange(current, previous) {
 
 function round2(value) {
   return Math.round(value * 100) / 100;
+}
+
+function normalizeLimit(limit, defaultLimit = 200) {
+  return Math.min(Math.max(Number(limit) || defaultLimit, 1), 500);
+}
+
+function customerProjection(user) {
+  return {
+    id: user._id.toString(),
+    accountNumber: user.accountNumber,
+    fullName: user.fullName,
+    email: user.email,
+    phone: user.phone,
+    balance: user.balance,
+    memberSince: user.memberSince,
+  };
+}
+
+function staffProjection(user) {
+  return {
+    id: user._id.toString(),
+    accountNumber: user.accountNumber,
+    fullName: user.fullName,
+    email: user.email,
+    phone: user.phone,
+    memberSince: user.memberSince,
+    role: user.role,
+  };
 }
 
 router.get('/dashboard', async (req, res) => {
@@ -148,6 +179,223 @@ router.get('/dashboard', async (req, res) => {
       message: 'Manager dashboard access granted',
     },
   });
+});
+
+router.get('/customers', async (req, res) => {
+  const { q = '' } = req.query;
+
+  const query = {
+    role: 'customer',
+    ...(q
+      ? {
+          $or: [
+            { fullName: { $regex: q, $options: 'i' } },
+            { email: { $regex: q, $options: 'i' } },
+            { accountNumber: { $regex: q, $options: 'i' } },
+          ],
+        }
+      : {}),
+  };
+
+  const users = await User.find(query).sort({ createdAt: -1 }).lean();
+  return res.json({ success: true, data: users.map((user) => customerProjection(user)) });
+});
+
+router.get('/staff-members', async (req, res) => {
+  const { q = '' } = req.query;
+
+  const query = {
+    role: 'staff',
+    ...(q
+      ? {
+          $or: [
+            { fullName: { $regex: q, $options: 'i' } },
+            { email: { $regex: q, $options: 'i' } },
+            { accountNumber: { $regex: q, $options: 'i' } },
+          ],
+        }
+      : {}),
+  };
+
+  const users = await User.find(query).sort({ createdAt: -1 }).lean();
+  return res.json({ success: true, data: users.map((user) => staffProjection(user)) });
+});
+
+router.get('/passbook/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { q = '', limit = 300 } = req.query;
+  const normalizedLimit = normalizeLimit(limit, 300);
+
+  const customer = await User.findOne({ _id: userId, role: 'customer' });
+  if (!customer) {
+    return res.status(404).json({ success: false, error: 'Customer account not found' });
+  }
+
+  const transactions = await Transaction.find({ userId: customer._id })
+    .sort({ timestamp: -1 })
+    .limit(normalizedLimit)
+    .lean();
+
+  const entries = buildPassbookEntriesFromTransactions(transactions, customer.balance)
+    .filter((entry) => transactionMatchesQuery(entry, q));
+
+  await createActivityLog({
+    actorUserId: req.user._id,
+    actorRole: req.user.role,
+    action: 'MANAGER_PASSBOOK_VIEW',
+    description: `${req.user.fullName} viewed passbook of ${customer.fullName}`,
+    targetUserId: customer._id,
+    targetRole: customer.role,
+    metadata: {
+      customerAccountNumber: customer.accountNumber,
+      searchQuery: String(q || ''),
+      returnedEntryCount: entries.length,
+    },
+  });
+
+  return res.json({
+    success: true,
+    data: {
+      customer: customer.toSafeObject(),
+      balance: customer.balance,
+      entries,
+    },
+  });
+});
+
+router.get('/passbook-logs', async (req, res) => {
+  const { q = '', customerId = '', limit = 300 } = req.query;
+  const normalizedLimit = normalizeLimit(limit, 300);
+  const normalizedQuery = String(q || '').trim();
+
+  const transactionQuery = {
+    ...(customerId ? { userId: customerId } : {}),
+  };
+
+  if (normalizedQuery) {
+    const regexSearch = { $regex: normalizedQuery, $options: 'i' };
+    const matchedCustomers = await User.find({
+      role: 'customer',
+      $or: [
+        { fullName: regexSearch },
+        { email: regexSearch },
+        { accountNumber: regexSearch },
+      ],
+    })
+      .select('_id')
+      .lean();
+
+    const matchedCustomerIds = matchedCustomers.map((item) => item._id);
+    transactionQuery.$or = [
+      { name: regexSearch },
+      { category: regexSearch },
+      { note: regexSearch },
+      { recipient: regexSearch },
+      ...(matchedCustomerIds.length ? [{ userId: { $in: matchedCustomerIds } }] : []),
+    ];
+  }
+
+  const rows = await Transaction.find(transactionQuery)
+    .sort({ timestamp: -1 })
+    .limit(normalizedLimit)
+    .populate('userId', 'fullName email accountNumber role')
+    .lean();
+
+  const data = rows
+    .filter((item) => item.userId && typeof item.userId === 'object' && item.userId.role === 'customer')
+    .map((item) => ({
+      id: item._id.toString(),
+      timestamp: item.timestamp,
+      name: item.name,
+      amount: item.amount,
+      type: item.type,
+      category: item.category,
+      note: item.note || '',
+      recipient: item.recipient || '',
+      customer: {
+        id: item.userId._id.toString(),
+        fullName: item.userId.fullName,
+        email: item.userId.email,
+        accountNumber: item.userId.accountNumber,
+      },
+    }));
+
+  return res.json({ success: true, data });
+});
+
+router.get('/staff-activity-logs', async (req, res) => {
+  const { q = '', staffId = '', action = '', limit = 300 } = req.query;
+  const normalizedLimit = normalizeLimit(limit, 300);
+  const normalizedQuery = String(q || '').trim();
+
+  const logQuery = {
+    actorRole: 'staff',
+    ...(staffId ? { actorUserId: staffId } : {}),
+    ...(action ? { action } : {}),
+  };
+
+  if (normalizedQuery) {
+    const regexSearch = { $regex: normalizedQuery, $options: 'i' };
+    const [matchedStaff, matchedCustomers] = await Promise.all([
+      User.find({
+        role: 'staff',
+        $or: [{ fullName: regexSearch }, { email: regexSearch }, { accountNumber: regexSearch }],
+      })
+        .select('_id')
+        .lean(),
+      User.find({
+        role: 'customer',
+        $or: [{ fullName: regexSearch }, { email: regexSearch }, { accountNumber: regexSearch }],
+      })
+        .select('_id')
+        .lean(),
+    ]);
+
+    const matchedStaffIds = matchedStaff.map((item) => item._id);
+    const matchedCustomerIds = matchedCustomers.map((item) => item._id);
+
+    logQuery.$or = [
+      { description: regexSearch },
+      { action: regexSearch },
+      ...(matchedStaffIds.length ? [{ actorUserId: { $in: matchedStaffIds } }] : []),
+      ...(matchedCustomerIds.length ? [{ targetUserId: { $in: matchedCustomerIds } }] : []),
+    ];
+  }
+
+  const rows = await ActivityLog.find(logQuery)
+    .sort({ createdAt: -1 })
+    .limit(normalizedLimit)
+    .populate('actorUserId', 'fullName email role accountNumber')
+    .populate('targetUserId', 'fullName email role accountNumber')
+    .lean();
+
+  const data = rows.map((item) => ({
+    id: item._id.toString(),
+    action: item.action,
+    description: item.description,
+    createdAt: item.createdAt,
+    metadata: item.metadata || {},
+    actor: item.actorUserId
+      ? {
+          id: item.actorUserId._id.toString(),
+          fullName: item.actorUserId.fullName,
+          email: item.actorUserId.email,
+          role: item.actorUserId.role,
+          accountNumber: item.actorUserId.accountNumber,
+        }
+      : null,
+    target: item.targetUserId
+      ? {
+          id: item.targetUserId._id.toString(),
+          fullName: item.targetUserId.fullName,
+          email: item.targetUserId.email,
+          role: item.targetUserId.role,
+          accountNumber: item.targetUserId.accountNumber,
+        }
+      : null,
+  }));
+
+  return res.json({ success: true, data });
 });
 
 export default router;

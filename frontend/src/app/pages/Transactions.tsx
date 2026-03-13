@@ -1,32 +1,34 @@
-import { ArrowLeft, Search, Filter, ArrowUpRight, ArrowDownLeft, Calendar } from 'lucide-react';
+import { ArrowLeft, Search, ArrowUpRight, ArrowDownLeft, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { useEffect, useMemo, useState } from 'react';
-import { getTransactions } from '../services/bankingApi';
+import { getMyPassbook } from '../services/bankingApi';
 import { toast } from 'sonner';
 
 export default function Transactions() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [transactions, setTransactions] = useState<Array<{
+  const [entries, setEntries] = useState<Array<{
     _id: string;
     name: string;
     amount: number;
     timestamp: string;
     type: 'credit' | 'debit';
     category: string;
+    openingBalance: number;
+    closingBalance: number;
   }>>([]);
 
   useEffect(() => {
     const timer = setTimeout(async () => {
       try {
         setIsLoading(true);
-        const items = await getTransactions(searchQuery);
-        setTransactions(items);
+        const payload = await getMyPassbook(searchQuery);
+        setEntries(payload.entries);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to load transactions');
+        toast.error(error instanceof Error ? error.message : 'Failed to load passbook');
       } finally {
         setIsLoading(false);
       }
@@ -35,41 +37,43 @@ export default function Transactions() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const { income, expenses, groupedTransactions } = useMemo(() => {
+  const { income, expenses, groupedEntries } = useMemo(() => {
     const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
-    const monthTransactions = transactions.filter(
+    const monthEntries = entries.filter(
       (item) => new Date(item.timestamp).getTime() >= monthStart.getTime()
     );
 
-    const incomeTotal = monthTransactions
+    const incomeTotal = monthEntries
       .filter((item) => item.type === 'credit')
       .reduce((sum, item) => sum + item.amount, 0);
 
-    const expenseTotal = monthTransactions
+    const expenseTotal = monthEntries
       .filter((item) => item.type === 'debit')
       .reduce((sum, item) => sum + item.amount, 0);
 
-    const groups = transactions.reduce<Record<string, typeof transactions>>((acc, tx) => {
-      const key = new Date(tx.timestamp).toLocaleDateString('en-IN', { dateStyle: 'medium' });
+    const groups = entries.reduce<Record<string, typeof entries>>((acc, item) => {
+      const key = new Date(item.timestamp).toLocaleDateString('en-IN', { dateStyle: 'medium' });
       if (!acc[key]) {
         acc[key] = [];
       }
-      acc[key].push(tx);
+      acc[key].push(item);
       return acc;
     }, {});
 
     const grouped = Object.entries(groups).map(([date, groupedItems]) => ({
       date,
-      transactions: groupedItems,
+      entries: groupedItems,
     }));
 
     return {
       income: incomeTotal,
       expenses: expenseTotal,
-      groupedTransactions: grouped,
+      groupedEntries: grouped,
     };
-  }, [transactions]);
+  }, [entries]);
+
+  const formatAmount = (value: number) => `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -83,7 +87,7 @@ export default function Transactions() {
             >
               <ArrowLeft className="w-5 h-5 text-white" />
             </button>
-            <h1 className="text-2xl font-bold text-white">Transactions</h1>
+            <h1 className="text-2xl font-bold text-white">Passbook</h1>
           </div>
 
           {/* Search Bar */}
@@ -91,14 +95,11 @@ export default function Transactions() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input
               type="text"
-              placeholder="Search transactions..."
+              placeholder="Search passbook entries..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-12 pl-12 pr-12 bg-white/20 backdrop-blur-md border-white/30 rounded-xl text-white placeholder:text-white/60"
             />
-            <button className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-              <Filter className="w-4 h-4 text-white" />
-            </button>
           </div>
         </div>
       </div>
@@ -111,7 +112,7 @@ export default function Transactions() {
               <ArrowDownLeft className="w-4 h-4 text-green-600" />
               <span className="text-xs text-green-700 font-medium">Income</span>
             </div>
-            <p className="text-2xl font-bold text-green-700">₹{income.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+            <p className="text-2xl font-bold text-green-700">{formatAmount(income)}</p>
             <p className="text-xs text-green-600 mt-1">This month</p>
           </Card>
           <Card className="bg-orange-50 border-orange-200 rounded-2xl p-4">
@@ -119,48 +120,51 @@ export default function Transactions() {
               <ArrowUpRight className="w-4 h-4 text-orange-600" />
               <span className="text-xs text-orange-700 font-medium">Expenses</span>
             </div>
-            <p className="text-2xl font-bold text-orange-700">₹{expenses.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+            <p className="text-2xl font-bold text-orange-700">{formatAmount(expenses)}</p>
             <p className="text-xs text-orange-600 mt-1">This month</p>
           </Card>
         </div>
 
-        {/* Transactions List */}
+        {/* Passbook List */}
         <div className="space-y-6">
-          {isLoading && <p className="text-sm text-gray-500">Loading transactions...</p>}
-          {!isLoading && groupedTransactions.length === 0 && (
-            <p className="text-sm text-gray-500">No transactions found.</p>
+          {isLoading && <p className="text-sm text-gray-500">Loading passbook...</p>}
+          {!isLoading && groupedEntries.length === 0 && (
+            <p className="text-sm text-gray-500">No passbook entries found.</p>
           )}
-          {groupedTransactions.map((group) => (
+          {groupedEntries.map((group) => (
             <div key={group.date}>
               <div className="flex items-center gap-2 mb-3 px-1">
                 <Calendar className="w-4 h-4 text-gray-500" />
                 <h2 className="text-sm font-semibold text-gray-700">{group.date}</h2>
               </div>
               <div className="space-y-2">
-                {group.transactions.map((transaction) => (
+                {group.entries.map((entry) => (
                   <Card 
-                    key={transaction._id} 
+                    key={entry._id} 
                     className="p-4 rounded-2xl bg-white hover:shadow-md transition-shadow cursor-pointer"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-xl">
-                          {transaction.type === 'credit' ? '💰' : '💸'}
+                          {entry.type === 'credit' ? '💰' : '💸'}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{transaction.name}</p>
+                          <p className="font-medium text-gray-900">{entry.name}</p>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs text-gray-500">{new Date(transaction.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span className="text-xs text-gray-500">{new Date(entry.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
                             <span className="text-xs text-gray-400">•</span>
-                            <span className="text-xs text-gray-500">{transaction.category}</span>
+                            <span className="text-xs text-gray-500">{entry.category}</span>
                           </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Opening {formatAmount(entry.openingBalance)} | Closing {formatAmount(entry.closingBalance)}
+                          </p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className={`font-semibold ${
-                          transaction.type === 'credit' ? 'text-green-600' : 'text-gray-900'
+                          entry.type === 'credit' ? 'text-green-600' : 'text-gray-900'
                         }`}>
-                          {transaction.type === 'credit' ? '+' : '-'}₹{Math.abs(transaction.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                          {entry.type === 'credit' ? '+' : '-'}{formatAmount(Math.abs(entry.amount))}
                         </p>
                       </div>
                     </div>
@@ -170,11 +174,6 @@ export default function Transactions() {
             </div>
           ))}
         </div>
-
-        {/* Load More */}
-        <button className="w-full py-3 text-center text-sm text-[#0066FF] font-medium hover:underline mt-4">
-          Load More Transactions
-        </button>
       </div>
     </div>
   );

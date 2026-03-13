@@ -24,6 +24,17 @@ export interface BankingTransaction {
   timestamp: string;
 }
 
+export interface PassbookEntry extends BankingTransaction {
+  openingBalance: number;
+  closingBalance: number;
+}
+
+export interface PassbookResponse {
+  customer: BankingUser;
+  balance: number;
+  entries: PassbookEntry[];
+}
+
 export interface LoanApplication {
   loanType: 'personal' | 'home' | 'auto' | 'business';
   amount: number;
@@ -97,6 +108,55 @@ export interface CashRequestItem {
   processedBy?: string;
   processedAt?: string;
   createdAt: string;
+}
+
+export interface ManagerPassbookLogItem {
+  id: string;
+  timestamp: string;
+  name: string;
+  amount: number;
+  type: 'credit' | 'debit';
+  category: string;
+  note?: string;
+  recipient?: string;
+  customer: {
+    id: string;
+    fullName: string;
+    email: string;
+    accountNumber: string;
+  };
+}
+
+export interface StaffActivityLogItem {
+  id: string;
+  action: string;
+  description: string;
+  createdAt: string;
+  metadata: Record<string, unknown>;
+  actor: {
+    id: string;
+    fullName: string;
+    email: string;
+    role: UserRole;
+    accountNumber: string;
+  } | null;
+  target: {
+    id: string;
+    fullName: string;
+    email: string;
+    role: UserRole;
+    accountNumber: string;
+  } | null;
+}
+
+export interface StaffMemberItem {
+  id: string;
+  accountNumber: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  memberSince: string;
+  role: 'staff';
 }
 
 interface ApiResult<T> {
@@ -191,6 +251,11 @@ export async function getTransactions(search = '') {
   return request<BankingTransaction[]>(`/banking/transactions${q}`);
 }
 
+export async function getMyPassbook(search = '') {
+  const q = search ? `?q=${encodeURIComponent(search)}` : '';
+  return request<PassbookResponse>(`/banking/passbook${q}`);
+}
+
 export async function createTransfer(recipient: string, amount: number, note?: string) {
   return request<{ transaction: BankingTransaction; balance: number }>('/banking/transfers', {
     method: 'POST',
@@ -216,6 +281,11 @@ export async function getManagerReports() {
 export async function getStaffAccounts(search = '') {
   const q = search ? `?q=${encodeURIComponent(search)}` : '';
   return request<StaffCustomerAccount[]>(`/staff/accounts${q}`);
+}
+
+export async function getStaffCustomerPassbook(userId: string, search = '') {
+  const q = search ? `?q=${encodeURIComponent(search)}` : '';
+  return request<PassbookResponse>(`/staff/passbook/${encodeURIComponent(userId)}${q}`);
 }
 
 export async function createCashRequest(type: 'deposit' | 'withdrawal', amount: number, note?: string) {
@@ -260,4 +330,46 @@ export async function staffWithdraw(userId: string, amount: number, note?: strin
     method: 'POST',
     body: JSON.stringify({ amount, note }),
   });
+}
+
+export async function getManagerCustomers(search = '') {
+  const q = search ? `?q=${encodeURIComponent(search)}` : '';
+  return request<StaffCustomerAccount[]>(`/manager/customers${q}`);
+}
+
+export async function getManagerStaffMembers(search = '') {
+  const q = search ? `?q=${encodeURIComponent(search)}` : '';
+  return request<StaffMemberItem[]>(`/manager/staff-members${q}`);
+}
+
+export async function getManagerCustomerPassbook(userId: string, search = '') {
+  const q = search ? `?q=${encodeURIComponent(search)}` : '';
+  return request<PassbookResponse>(`/manager/passbook/${encodeURIComponent(userId)}${q}`);
+}
+
+export async function getManagerPassbookLogs(search = '', customerId = '') {
+  const params = new URLSearchParams();
+  if (search) {
+    params.set('q', search);
+  }
+  if (customerId) {
+    params.set('customerId', customerId);
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request<ManagerPassbookLogItem[]>(`/manager/passbook-logs${query}`);
+}
+
+export async function getManagerStaffActivityLogs(search = '', staffId = '', action = '') {
+  const params = new URLSearchParams();
+  if (search) {
+    params.set('q', search);
+  }
+  if (staffId) {
+    params.set('staffId', staffId);
+  }
+  if (action) {
+    params.set('action', action);
+  }
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request<StaffActivityLogItem[]>(`/manager/staff-activity-logs${query}`);
 }

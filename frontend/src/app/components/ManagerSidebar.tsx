@@ -1,11 +1,13 @@
 import { useNavigate, useLocation } from 'react-router';
-import { LayoutDashboard, FileCheck, TrendingUp, BarChart3, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileCheck, TrendingUp, BarChart3, ClipboardList, BookOpen, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/manager/dashboard' },
   { icon: FileCheck, label: 'Loan Approvals', path: '/manager/loans' },
   { icon: TrendingUp, label: 'Financial Overview', path: '/manager/overview' },
+  { icon: BookOpen, label: 'Passbook Logs', path: '/manager/passbook-logs' },
+  { icon: ClipboardList, label: 'Staff Logs', path: '/manager/staff-logs' },
   { icon: BarChart3, label: 'Reports & Analytics', path: '/manager/reports' },
 ];
 

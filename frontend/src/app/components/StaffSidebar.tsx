@@ -1,11 +1,12 @@
 import { useNavigate, useLocation } from 'react-router';
-import { LayoutDashboard, FileText, Users, BarChart3, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, BarChart3, BookOpen, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/staff/dashboard' },
   { icon: FileText, label: 'Loan Applications', path: '/staff/loans' },
   { icon: Users, label: 'Customer Accounts', path: '/staff/accounts' },
+  { icon: BookOpen, label: 'Customer Passbook', path: '/staff/passbook' },
   { icon: BarChart3, label: 'Reports', path: '/staff/reports' },
 ];
 

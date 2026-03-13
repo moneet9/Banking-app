@@ -4,6 +4,8 @@ import Transaction from '../models/Transaction.js';
 import CashRequest from '../models/CashRequest.js';
 import User from '../models/User.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { createActivityLog } from '../utils/activityLogger.js';
+import { buildPassbookEntriesFromTransactions, transactionMatchesQuery } from '../utils/passbook.js';
 
 const router = express.Router();
 
@@ -41,6 +43,48 @@ router.get('/accounts', async (req, res) => {
   return res.json({ success: true, data: items });
 });
 
+router.get('/passbook/:userId', async (req, res) => {
+  const { userId } = req.params;
+  const { q = '', limit = 300 } = req.query;
+  const normalizedLimit = Math.min(Math.max(Number(limit) || 300, 1), 500);
+
+  const customer = await User.findOne({ _id: userId, role: 'customer' });
+  if (!customer) {
+    return res.status(404).json({ success: false, error: 'Customer account not found' });
+  }
+
+  const transactions = await Transaction.find({ userId: customer._id })
+    .sort({ timestamp: -1 })
+    .limit(normalizedLimit)
+    .lean();
+
+  const entries = buildPassbookEntriesFromTransactions(transactions, customer.balance)
+    .filter((entry) => transactionMatchesQuery(entry, q));
+
+  await createActivityLog({
+    actorUserId: req.user._id,
+    actorRole: req.user.role,
+    action: 'STAFF_PASSBOOK_VIEW',
+    description: `${req.user.fullName} viewed passbook of ${customer.fullName}`,
+    targetUserId: customer._id,
+    targetRole: customer.role,
+    metadata: {
+      customerAccountNumber: customer.accountNumber,
+      searchQuery: String(q || ''),
+      returnedEntryCount: entries.length,
+    },
+  });
+
+  return res.json({
+    success: true,
+    data: {
+      customer: customer.toSafeObject(),
+      balance: customer.balance,
+      entries,
+    },
+  });
+});
+
 router.post('/accounts/:userId/deposit', async (req, res) => {
   const { userId } = req.params;
   const { amount, note } = req.body;
@@ -65,6 +109,22 @@ router.post('/accounts/:userId/deposit', async (req, res) => {
     type: 'credit',
     category: 'Deposit',
     note: note || `Staff ${req.user.fullName} deposited funds`,
+  });
+
+  await createActivityLog({
+    actorUserId: req.user._id,
+    actorRole: req.user.role,
+    action: 'STAFF_CASH_DEPOSIT',
+    description: `${req.user.fullName} deposited funds for ${customer.fullName}`,
+    targetUserId: customer._id,
+    targetRole: customer.role,
+    metadata: {
+      amount: numericAmount,
+      note: note || '',
+      transactionId: transaction._id.toString(),
+      customerAccountNumber: customer.accountNumber,
+      updatedBalance: customer.balance,
+    },
   });
 
   return res.status(201).json({
@@ -106,6 +166,22 @@ router.post('/accounts/:userId/withdraw', async (req, res) => {
     type: 'debit',
     category: 'Withdrawal',
     note: note || `Staff ${req.user.fullName} processed withdrawal`,
+  });
+
+  await createActivityLog({
+    actorUserId: req.user._id,
+    actorRole: req.user.role,
+    action: 'STAFF_CASH_WITHDRAWAL',
+    description: `${req.user.fullName} processed withdrawal for ${customer.fullName}`,
+    targetUserId: customer._id,
+    targetRole: customer.role,
+    metadata: {
+      amount: numericAmount,
+      note: note || '',
+      transactionId: transaction._id.toString(),
+      customerAccountNumber: customer.accountNumber,
+      updatedBalance: customer.balance,
+    },
   });
 
   return res.status(201).json({
@@ -181,6 +257,23 @@ router.post('/requests/:requestId/approve', async (req, res) => {
   }
   await cashRequest.save();
 
+  await createActivityLog({
+    actorUserId: req.user._id,
+    actorRole: req.user.role,
+    action: 'STAFF_CASH_REQUEST_APPROVE',
+    description: `${req.user.fullName} approved ${cashRequest.type} request for ${customer.fullName}`,
+    targetUserId: customer._id,
+    targetRole: customer.role,
+    metadata: {
+      requestId: cashRequest._id.toString(),
+      requestType: cashRequest.type,
+      amount: cashRequest.amount,
+      note: note || cashRequest.note || '',
+      customerAccountNumber: customer.accountNumber,
+      updatedBalance: customer.balance,
+    },
+  });
+
   return res.json({
     success: true,
     data: {
@@ -212,6 +305,31 @@ router.post('/requests/:requestId/reject', async (req, res) => {
     cashRequest.note = note;
   }
   await cashRequest.save();
+
+  const customer = await User.findOne({ _id: cashRequest.userId, role: 'customer' }).select(
+    'fullName accountNumber role'
+  );
+
+  await createActivityLog({
+    actorUserId: req.user._id,
+    actorRole: req.user.role,
+    action: 'STAFF_CASH_REQUEST_REJECT',
+    description: `${req.user.fullName} rejected ${cashRequest.type} request`,
+    ...(customer
+      ? {
+          targetUserId: customer._id,
+          targetRole: customer.role,
+        }
+      : {}),
+    metadata: {
+      requestId: cashRequest._id.toString(),
+      requestType: cashRequest.type,
+      amount: cashRequest.amount,
+      note: note || cashRequest.note || '',
+      customerAccountNumber: customer?.accountNumber || '',
+      customerName: customer?.fullName || '',
+    },
+  });
 
   return res.json({
     success: true,
