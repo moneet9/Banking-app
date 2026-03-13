@@ -76,7 +76,7 @@ export default function Transactions() {
   const formatAmount = (value: number) => `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 pb-20">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] pt-6 pb-8 px-4">
         <div className="max-w-2xl mx-auto">
