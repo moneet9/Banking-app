@@ -76,9 +76,9 @@ export default function Transactions() {
   const formatAmount = (value: number) => `₹${value.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#0066FF] to-[#004FCC] pt-6 pb-8 px-4">
+      <div className="bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] pt-6 pb-8 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-4 mb-4">
             <button 
@@ -98,7 +98,7 @@ export default function Transactions() {
               placeholder="Search passbook entries..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-12 pl-12 pr-12 bg-white/20 backdrop-blur-md border-white/30 rounded-xl text-white placeholder:text-white/60"
+              className="h-12 pl-12 pr-12 bg-[#E2E8F0] border-slate-300 rounded-xl text-gray-800 placeholder:text-gray-500"
             />
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function Transactions() {
       <div className="max-w-2xl mx-auto px-4 py-6">
         {/* Monthly Summary */}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <Card className="bg-green-50 border-green-200 rounded-2xl p-4">
+          <Card className="bg-white border-green-200 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <ArrowDownLeft className="w-4 h-4 text-green-600" />
               <span className="text-xs text-green-700 font-medium">Income</span>
@@ -115,7 +115,7 @@ export default function Transactions() {
             <p className="text-2xl font-bold text-green-700">{formatAmount(income)}</p>
             <p className="text-xs text-green-600 mt-1">This month</p>
           </Card>
-          <Card className="bg-orange-50 border-orange-200 rounded-2xl p-4">
+          <Card className="bg-white border-orange-200 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <ArrowUpRight className="w-4 h-4 text-orange-600" />
               <span className="text-xs text-orange-700 font-medium">Expenses</span>

@@ -59,9 +59,9 @@ export default function Profile() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#0066FF] to-[#004FCC] pt-6 pb-20 px-4">
+      <div className="bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] pt-6 pb-20 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-4 mb-8">
             <button 
@@ -74,26 +74,26 @@ export default function Profile() {
           </div>
 
           {/* Profile Card */}
-          <Card className="bg-white/10 backdrop-blur-md border-white/20 rounded-3xl p-6">
+          <Card className="bg-white border-white/60 rounded-3xl p-6 shadow-lg">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center text-4xl shadow-lg">
                 👤
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-white mb-1">{profileData.name}</h2>
-                <p className="text-blue-100 text-sm">Member since {profileData.memberSince}</p>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">{profileData.name}</h2>
+                <p className="text-[#2563EB] text-sm">Member since {profileData.memberSince}</p>
               </div>
             </div>
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-white/90">
+              <div className="flex items-center gap-2 text-gray-700">
                 <Mail className="w-4 h-4" />
                 <span className="text-sm">{profileData.email}</span>
               </div>
-              <div className="flex items-center gap-2 text-white/90">
+              <div className="flex items-center gap-2 text-gray-700">
                 <Phone className="w-4 h-4" />
                 <span className="text-sm">{profileData.phone}</span>
               </div>
-              <div className="flex items-center gap-2 text-white/90">
+              <div className="flex items-center gap-2 text-gray-700">
                 <CreditCard className="w-4 h-4" />
                 <span className="text-sm">Account {profileData.accountNumber}</span>
               </div>
@@ -118,7 +118,7 @@ export default function Profile() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                      <item.icon className="w-5 h-5 text-[#0066FF]" />
+                      <item.icon className="w-5 h-5 text-[#2563EB]" />
                     </div>
                     <span className="font-medium text-gray-900">{item.label}</span>
                   </div>

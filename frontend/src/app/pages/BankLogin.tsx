@@ -37,11 +37,11 @@ export default function BankLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0066FF] to-[#004FCC] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-white hover:text-blue-100 mb-6"
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to role selection
@@ -49,11 +49,11 @@ export default function BankLogin() {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-4">
-            <span className="text-3xl font-bold text-[#0066FF]">₹</span>
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] rounded-2xl shadow-lg mb-4">
+            <span className="text-3xl font-bold text-white">₹</span>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">SecureBank</h1>
-          <p className="text-blue-100">Customer Login</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">SecureBank</h1>
+          <p className="text-gray-600">Customer Login</p>
         </div>
 
         {/* Login Card */}
@@ -69,7 +69,7 @@ export default function BankLogin() {
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-12 bg-gray-50 border-gray-200 rounded-xl"
+                className="h-12 bg-[#E2E8F0] border-slate-300 rounded-xl"
                 required
               />
             </div>
@@ -82,7 +82,7 @@ export default function BankLogin() {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-12 bg-gray-50 border-gray-200 rounded-xl"
+                className="h-12 bg-[#E2E8F0] border-slate-300 rounded-xl"
                 required
               />
             </div>
@@ -92,7 +92,7 @@ export default function BankLogin() {
                 <input type="checkbox" className="w-4 h-4 rounded border-gray-300" />
                 Remember me
               </label>
-              <button type="button" className="text-[#0066FF] font-medium hover:underline">
+              <button type="button" className="text-[#2563EB] font-medium hover:underline">
                 Forgot Password?
               </button>
             </div>
@@ -100,7 +100,7 @@ export default function BankLogin() {
             <Button 
               type="submit" 
               disabled={isSubmitting}
-              className="w-full h-12 bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30"
+              className="w-full h-12 bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] hover:from-[#1D4ED8] hover:to-[#1E40AF] text-white rounded-xl font-semibold shadow-lg shadow-blue-300/40"
             >
               {isSubmitting ? 'Logging in...' : 'Login'}
             </Button>
@@ -108,13 +108,13 @@ export default function BankLogin() {
 
           <div className="mt-6 text-center text-sm text-gray-600">
             Don't have an account?{' '}
-            <button className="text-[#0066FF] font-semibold hover:underline">
+            <button className="text-[#2563EB] font-semibold hover:underline">
               Sign Up
             </button>
           </div>
         </div>
 
-        <p className="text-center text-blue-100 text-xs mt-6">
+        <p className="text-center text-gray-500 text-xs mt-6">
           Secured by 256-bit encryption
         </p>
       </div>

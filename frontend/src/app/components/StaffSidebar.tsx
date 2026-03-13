@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router';
-import { LayoutDashboard, FileText, Users, BarChart3, BookOpen, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, Users, BookOpen, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 const menuItems = [
@@ -7,7 +7,6 @@ const menuItems = [
   { icon: FileText, label: 'Loan Applications', path: '/staff/loans' },
   { icon: Users, label: 'Customer Accounts', path: '/staff/accounts' },
   { icon: BookOpen, label: 'Customer Passbook', path: '/staff/passbook' },
-  { icon: BarChart3, label: 'Reports', path: '/staff/reports' },
 ];
 
 export function StaffSidebar() {

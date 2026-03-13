@@ -1,55 +1,132 @@
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Users, TrendingUp, IndianRupee, FileText } from 'lucide-react';
+import { toast } from 'sonner';
 import { ManagerSidebar } from '../../components/ManagerSidebar';
 import { Card } from '../../components/ui/card';
-import { Users, TrendingUp, DollarSign, FileText } from 'lucide-react';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { getManagerReports, type ManagerReportsData } from '../../services/bankingApi';
 
-const kpiData = [
-  { label: 'Total Customers', value: '1,245', icon: Users, color: 'bg-blue-500', change: '+12.5%' },
-  { label: 'Total Revenue', value: '₹45.2M', icon: TrendingUp, color: 'bg-green-500', change: '+18.2%' },
-  { label: 'Active Loans', value: '₹124.5M', icon: DollarSign, color: 'bg-purple-500', change: '+8.7%' },
-  { label: 'Pending Approvals', value: '15', icon: FileText, color: 'bg-orange-500', change: '-3' },
-];
+const emptyData: ManagerReportsData = {
+  role: 'manager',
+  customerCount: 0,
+  totalLoans: 0,
+  approvedLoans: 0,
+  rejectedLoans: 0,
+  kpis: {
+    totalRevenue: 0,
+    totalRevenueChange: 0,
+    netProfit: 0,
+    netProfitChange: 0,
+    totalCustomers: 0,
+    totalCustomersChange: 0,
+    defaultRate: 0,
+    defaultRateChange: 0,
+  },
+  financialData: [],
+  loanPerformance: [],
+  customerGrowth: [],
+};
 
-const monthlyRevenue = [
-  { month: 'Sep', revenue: 3200000 },
-  { month: 'Oct', revenue: 3500000 },
-  { month: 'Nov', revenue: 3800000 },
-  { month: 'Dec', revenue: 4200000 },
-  { month: 'Jan', revenue: 4000000 },
-  { month: 'Feb', revenue: 4500000 },
-];
+function formatINR(value: number) {
+  return `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+}
 
-const loanDistribution = [
-  { name: 'Home Loans', value: 45, color: '#0066FF' },
-  { name: 'Personal Loans', value: 25, color: '#00C853' },
-  { name: 'Business Loans', value: 20, color: '#FF6D00' },
-  { name: 'Car Loans', value: 10, color: '#AA00FF' },
-];
-
-const transactionTrends = [
-  { month: 'Sep', deposits: 2500000, withdrawals: 1800000 },
-  { month: 'Oct', deposits: 2700000, withdrawals: 2000000 },
-  { month: 'Nov', deposits: 2900000, withdrawals: 2100000 },
-  { month: 'Dec', deposits: 3200000, withdrawals: 2300000 },
-  { month: 'Jan', deposits: 3000000, withdrawals: 2200000 },
-  { month: 'Feb', deposits: 3400000, withdrawals: 2500000 },
-];
+function formatPercent(value: number) {
+  const sign = value >= 0 ? '+' : '';
+  return `${sign}${value.toFixed(1)}%`;
+}
 
 export default function ManagerDashboard() {
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
+  const [reports, setReports] = useState<ManagerReportsData>(emptyData);
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getManagerReports();
+        setReports(data);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load manager dashboard');
+        navigate('/manager/login');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDashboard();
+  }, [navigate]);
+
+  const pendingLoans = Math.max(reports.totalLoans - reports.approvedLoans - reports.rejectedLoans, 0);
+
+  const kpiData = useMemo(
+    () => [
+      {
+        label: 'Total Customers',
+        value: reports.customerCount.toLocaleString('en-IN'),
+        icon: Users,
+        color: 'bg-blue-500',
+        change: formatPercent(reports.kpis.totalCustomersChange),
+      },
+      {
+        label: 'Total Revenue',
+        value: formatINR(reports.kpis.totalRevenue),
+        icon: TrendingUp,
+        color: 'bg-green-500',
+        change: formatPercent(reports.kpis.totalRevenueChange),
+      },
+      {
+        label: 'Net Profit',
+        value: formatINR(reports.kpis.netProfit),
+        icon: IndianRupee,
+        color: 'bg-purple-500',
+        change: formatPercent(reports.kpis.netProfitChange),
+      },
+      {
+        label: 'Pending Approvals',
+        value: pendingLoans.toLocaleString('en-IN'),
+        icon: FileText,
+        color: 'bg-orange-500',
+        change: `${reports.totalLoans.toLocaleString('en-IN')} total loans`,
+      },
+    ],
+    [pendingLoans, reports]
+  );
+
+  const loanDistribution = useMemo(
+    () => [
+      { name: 'Approved', value: reports.approvedLoans, color: '#16A34A' },
+      { name: 'Rejected', value: reports.rejectedLoans, color: '#DC2626' },
+      { name: 'Pending', value: pendingLoans, color: '#F59E0B' },
+    ].filter((item) => item.value > 0),
+    [pendingLoans, reports.approvedLoans, reports.rejectedLoans]
+  );
+
+  const transactionTrends = useMemo(
+    () =>
+      reports.financialData.map((item) => ({
+        month: item.month,
+        credits: item.revenue,
+        debits: item.expenses,
+      })),
+    [reports.financialData]
+  );
+
   return (
     <div className="flex h-screen bg-gray-50">
       <ManagerSidebar />
-      
+
       <div className="flex-1 overflow-auto">
-        {/* Header */}
         <div className="bg-white border-b border-gray-200 px-8 py-6">
           <h1 className="text-3xl font-bold text-gray-900">Manager Dashboard</h1>
-          <p className="text-gray-600 mt-1">Executive overview and analytics</p>
+          <p className="text-gray-600 mt-1">Executive performance and portfolio overview</p>
         </div>
 
-        {/* Main Content */}
         <div className="p-8">
-          {/* KPI Cards */}
+          {isLoading && <p className="text-sm text-gray-600 mb-4">Loading manager dashboard...</p>}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {kpiData.map((kpi) => (
               <Card key={kpi.label} className="p-6 rounded-2xl bg-white border border-gray-200">
@@ -58,7 +135,7 @@ export default function ManagerDashboard() {
                     <kpi.icon className="w-6 h-6 text-white" />
                   </div>
                   <span className={`text-sm font-semibold ${
-                    kpi.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
+                    kpi.change.startsWith('+') ? 'text-green-600' : kpi.change.startsWith('-') ? 'text-red-600' : 'text-gray-600'
                   }`}>
                     {kpi.change}
                   </span>
@@ -70,16 +147,15 @@ export default function ManagerDashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Monthly Revenue Chart */}
             <Card className="p-6 rounded-2xl bg-white border border-gray-200">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Monthly Revenue</h3>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlyRevenue}>
+                <BarChart data={reports.financialData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="month" stroke="#666" />
                   <YAxis stroke="#666" />
-                  <Tooltip 
-                    formatter={(value: number) => `₹${(value / 100000).toFixed(1)}L`}
+                  <Tooltip
+                    formatter={(value: number) => formatINR(value)}
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e0e0e0' }}
                   />
                   <Bar dataKey="revenue" fill="#0066FF" radius={[8, 8, 0, 0]} />
@@ -87,22 +163,20 @@ export default function ManagerDashboard() {
               </ResponsiveContainer>
             </Card>
 
-            {/* Loan Distribution Chart */}
             <Card className="p-6 rounded-2xl bg-white border border-gray-200">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Loan Distribution</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Loan Status Distribution</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={loanDistribution}
+                    data={loanDistribution.length ? loanDistribution : [{ name: 'No Data', value: 1, color: '#D1D5DB' }]}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}%`}
+                    label={({ name, value }) => `${name}: ${value}`}
                     outerRadius={100}
-                    fill="#8884d8"
                     dataKey="value"
                   >
-                    {loanDistribution.map((entry, index) => (
+                    {(loanDistribution.length ? loanDistribution : [{ name: 'No Data', value: 1, color: '#D1D5DB' }]).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
@@ -112,21 +186,20 @@ export default function ManagerDashboard() {
             </Card>
           </div>
 
-          {/* Transaction Trends Chart */}
           <Card className="p-6 rounded-2xl bg-white border border-gray-200">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Transaction Trends</h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Credits vs Debits Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={transactionTrends}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" stroke="#666" />
                 <YAxis stroke="#666" />
-                <Tooltip 
-                  formatter={(value: number) => `₹${(value / 100000).toFixed(1)}L`}
+                <Tooltip
+                  formatter={(value: number) => formatINR(value)}
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e0e0e0' }}
                 />
                 <Legend />
-                <Line type="monotone" dataKey="deposits" stroke="#00C853" strokeWidth={2} />
-                <Line type="monotone" dataKey="withdrawals" stroke="#FF6D00" strokeWidth={2} />
+                <Line type="monotone" dataKey="credits" stroke="#00C853" strokeWidth={2} name="Credits" />
+                <Line type="monotone" dataKey="debits" stroke="#FF6D00" strokeWidth={2} name="Debits" />
               </LineChart>
             </ResponsiveContainer>
           </Card>

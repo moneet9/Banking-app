@@ -12,6 +12,33 @@ const router = express.Router();
 router.use(requireAuth);
 router.use(requireRole('staff', 'manager'));
 
+function monthRange(monthOffsetFromCurrent) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() + monthOffsetFromCurrent, 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + monthOffsetFromCurrent + 1, 1);
+  return { start, end };
+}
+
+function monthLabel(date) {
+  return date.toLocaleDateString('en-IN', { month: 'short' });
+}
+
+function formatLoanType(loanType) {
+  if (loanType === 'home') {
+    return 'Home Loan';
+  }
+  if (loanType === 'personal') {
+    return 'Personal Loan';
+  }
+  if (loanType === 'business') {
+    return 'Business Loan';
+  }
+  if (loanType === 'auto') {
+    return 'Auto Loan';
+  }
+  return 'Loan';
+}
+
 router.get('/accounts', async (req, res) => {
   const { q = '' } = req.query;
 
@@ -342,10 +369,56 @@ router.post('/requests/:requestId/reject', async (req, res) => {
 });
 
 router.get('/dashboard', async (req, res) => {
-  const [customerCount, pendingLoans] = await Promise.all([
+  const [customerCount, pendingLoans, approvedLoans, rejectedLoans, activeAccounts, recentLoanDocs] = await Promise.all([
     User.countDocuments({ role: 'customer' }),
     Loan.countDocuments({ status: 'pending' }),
+    Loan.countDocuments({ status: 'approved' }),
+    Loan.countDocuments({ status: 'rejected' }),
+    User.countDocuments({ role: 'customer', balance: { $gt: 0 } }),
+    Loan.find({})
+      .populate('userId', 'fullName')
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .lean(),
   ]);
+
+  const ranges = [-5, -4, -3, -2, -1, 0].map((offset) => {
+    const range = monthRange(offset);
+    return {
+      ...range,
+      month: monthLabel(range.start),
+    };
+  });
+
+  const monthlyLoanStats = await Promise.all(
+    ranges.map(async (range) => {
+      const [processed, approved] = await Promise.all([
+        Loan.countDocuments({ createdAt: { $gte: range.start, $lt: range.end } }),
+        Loan.countDocuments({ status: 'approved', createdAt: { $gte: range.start, $lt: range.end } }),
+      ]);
+
+      return {
+        month: range.month,
+        processed,
+        approved,
+      };
+    })
+  );
+
+  const recentLoans = recentLoanDocs.map((loan) => ({
+    id: loan._id.toString(),
+    customer:
+      loan.userId && typeof loan.userId === 'object' && 'fullName' in loan.userId
+        ? loan.userId.fullName
+        : 'Unknown Customer',
+    amount: loan.amount,
+    type: formatLoanType(loan.loanType),
+    status: loan.status,
+    date: new Date(loan.createdAt).toISOString().split('T')[0],
+  }));
+
+  const totalLoans = pendingLoans + approvedLoans + rejectedLoans;
+  const approvalRate = totalLoans > 0 ? Math.round((approvedLoans / totalLoans) * 1000) / 10 : 0;
 
   return res.json({
     success: true,
@@ -353,6 +426,13 @@ router.get('/dashboard', async (req, res) => {
       role: req.user.role,
       customerCount,
       pendingLoans,
+      approvedLoans,
+      rejectedLoans,
+      totalLoans,
+      activeAccounts,
+      approvalRate,
+      monthlyLoanStats,
+      recentLoans,
       message: 'Staff dashboard access granted',
     },
   });

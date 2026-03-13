@@ -18,7 +18,6 @@ import StaffLogin from './pages/staff/StaffLogin';
 import StaffDashboard from './pages/staff/StaffDashboard';
 import StaffLoans from './pages/staff/StaffLoans';
 import StaffAccounts from './pages/staff/StaffAccounts';
-import StaffReports from './pages/staff/StaffReports';
 import StaffPassbook from './pages/staff/StaffPassbook';
 
 // Manager imports
@@ -129,7 +128,7 @@ export const router = createBrowserRouter([
           },
           {
             path: 'reports',
-            element: <StaffReports />,
+            element: <Navigate to="/staff/dashboard" replace />,
           },
           {
             path: 'passbook',
@@ -161,7 +160,7 @@ export const router = createBrowserRouter([
           },
           {
             path: 'overview',
-            element: <ManagerDashboard />,
+            element: <Navigate to="/manager/reports" replace />,
           },
           {
             path: 'reports',

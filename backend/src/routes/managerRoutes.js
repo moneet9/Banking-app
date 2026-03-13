@@ -2,9 +2,11 @@ import express from 'express';
 import Loan from '../models/Loan.js';
 import Transaction from '../models/Transaction.js';
 import ActivityLog from '../models/ActivityLog.js';
+import LoanRate from '../models/LoanRate.js';
 import User from '../models/User.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { createActivityLog } from '../utils/activityLogger.js';
+import { getLoanRatesMap, loanRateMapToList, LOAN_TYPES } from '../utils/loanRates.js';
 import { buildPassbookEntriesFromTransactions, transactionMatchesQuery } from '../utils/passbook.js';
 
 const router = express.Router();
@@ -61,6 +63,85 @@ function staffProjection(user) {
     role: user.role,
   };
 }
+
+function isValidRate(value) {
+  return Number.isFinite(value) && value > 0 && value <= 100;
+}
+
+router.get('/loan-rates', async (req, res) => {
+  const rateMap = await getLoanRatesMap();
+  return res.json({ success: true, data: loanRateMapToList(rateMap) });
+});
+
+router.put('/loan-rates', async (req, res) => {
+  const { rates } = req.body;
+
+  if (!rates || typeof rates !== 'object' || Array.isArray(rates)) {
+    return res.status(400).json({ success: false, error: 'Rates payload must be an object' });
+  }
+
+  const loanTypes = Object.keys(rates);
+  if (!loanTypes.length) {
+    return res.status(400).json({ success: false, error: 'At least one loan rate must be provided' });
+  }
+
+  const invalidLoanTypes = loanTypes.filter((loanType) => !LOAN_TYPES.includes(loanType));
+  if (invalidLoanTypes.length) {
+    return res.status(400).json({ success: false, error: `Unsupported loan type(s): ${invalidLoanTypes.join(', ')}` });
+  }
+
+  const updates = [];
+  for (const loanType of loanTypes) {
+    const numericRate = Number(rates[loanType]);
+    if (!isValidRate(numericRate)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid rate for ${loanType}. Provide a number between 0 and 100`,
+      });
+    }
+
+    updates.push({
+      loanType,
+      rate: round2(numericRate),
+    });
+  }
+
+  await Promise.all(
+    updates.map((item) =>
+      LoanRate.updateOne(
+        { loanType: item.loanType },
+        {
+          $set: {
+            rate: item.rate,
+          },
+          $setOnInsert: {
+            loanType: item.loanType,
+          },
+        },
+        { upsert: true }
+      )
+    )
+  );
+
+  await createActivityLog({
+    actorUserId: req.user._id,
+    actorRole: req.user.role,
+    action: 'MANAGER_LOAN_RATE_UPDATE',
+    description: `${req.user.fullName} updated loan interest rates`,
+    metadata: {
+      updatedRates: updates,
+      updatedCount: updates.length,
+    },
+  });
+
+  const rateMap = await getLoanRatesMap();
+
+  return res.json({
+    success: true,
+    data: loanRateMapToList(rateMap),
+    message: 'Loan rates updated successfully',
+  });
+});
 
 router.get('/dashboard', async (req, res) => {
   const [customerCount, totalLoans, approvedLoans, rejectedLoans, allTransactions] = await Promise.all([

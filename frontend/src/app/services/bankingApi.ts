@@ -1,6 +1,7 @@
 const API_BASE_URL = (import.meta as { env?: Record<string, string> }).env?.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 export type UserRole = 'customer' | 'staff' | 'manager';
+export type LoanType = 'personal' | 'home' | 'auto' | 'business';
 
 export interface BankingUser {
   id: string;
@@ -36,9 +37,14 @@ export interface PassbookResponse {
 }
 
 export interface LoanApplication {
-  loanType: 'personal' | 'home' | 'auto' | 'business';
+  loanType: LoanType;
   amount: number;
   tenureMonths: number;
+}
+
+export interface LoanRateItem {
+  loanType: LoanType;
+  rate: number;
 }
 
 export interface MonthlyFinancialPoint {
@@ -79,6 +85,34 @@ export interface ManagerReportsData {
   financialData: MonthlyFinancialPoint[];
   loanPerformance: MonthlyLoanPoint[];
   customerGrowth: MonthlyCustomerPoint[];
+}
+
+export interface StaffDashboardMonthlyPoint {
+  month: string;
+  processed: number;
+  approved: number;
+}
+
+export interface StaffDashboardRecentLoan {
+  id: string;
+  customer: string;
+  amount: number;
+  type: string;
+  status: 'pending' | 'approved' | 'rejected';
+  date: string;
+}
+
+export interface StaffDashboardData {
+  role: UserRole;
+  customerCount: number;
+  pendingLoans: number;
+  approvedLoans: number;
+  rejectedLoans: number;
+  totalLoans: number;
+  activeAccounts: number;
+  approvalRate: number;
+  monthlyLoanStats: StaffDashboardMonthlyPoint[];
+  recentLoans: StaffDashboardRecentLoan[];
 }
 
 export interface StaffCustomerAccount {
@@ -270,12 +304,20 @@ export async function applyLoan(payload: LoanApplication) {
   });
 }
 
+export async function getLoanRates() {
+  return request<LoanRateItem[]>('/banking/loan-rates');
+}
+
 export async function getProfile() {
   return request<BankingUser>('/banking/me');
 }
 
 export async function getManagerReports() {
   return request<ManagerReportsData>('/manager/dashboard');
+}
+
+export async function getStaffDashboard() {
+  return request<StaffDashboardData>('/staff/dashboard');
 }
 
 export async function getStaffAccounts(search = '') {
@@ -372,4 +414,15 @@ export async function getManagerStaffActivityLogs(search = '', staffId = '', act
   }
   const query = params.toString() ? `?${params.toString()}` : '';
   return request<StaffActivityLogItem[]>(`/manager/staff-activity-logs${query}`);
+}
+
+export async function getManagerLoanRates() {
+  return request<LoanRateItem[]>('/manager/loan-rates');
+}
+
+export async function updateManagerLoanRates(rates: Partial<Record<LoanType, number>>) {
+  return request<LoanRateItem[]>('/manager/loan-rates', {
+    method: 'PUT',
+    body: JSON.stringify({ rates }),
+  });
 }

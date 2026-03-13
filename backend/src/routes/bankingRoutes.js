@@ -4,15 +4,9 @@ import Transaction from '../models/Transaction.js';
 import CashRequest from '../models/CashRequest.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { buildPassbookEntriesFromTransactions, transactionMatchesQuery } from '../utils/passbook.js';
+import { getLoanRatesMap, loanRateMapToList } from '../utils/loanRates.js';
 
 const router = express.Router();
-
-const LOAN_RATES = {
-  personal: 8.5,
-  home: 6.5,
-  auto: 7.2,
-  business: 9.5,
-};
 
 router.use(requireAuth);
 router.use(requireRole('customer'));
@@ -96,6 +90,14 @@ router.get('/passbook', async (req, res) => {
   });
 });
 
+router.get('/loan-rates', async (req, res) => {
+  const rateMap = await getLoanRatesMap();
+  return res.json({
+    success: true,
+    data: loanRateMapToList(rateMap),
+  });
+});
+
 router.post('/transfers', async (req, res) => {
   const { recipient, amount, note } = req.body;
   const numericAmount = Number(amount);
@@ -135,12 +137,13 @@ router.post('/loans', async (req, res) => {
   const { loanType, amount, tenureMonths } = req.body;
   const principal = Number(amount);
   const tenure = Number(tenureMonths);
+  const loanRates = await getLoanRatesMap();
 
-  if (!loanType || !LOAN_RATES[loanType] || Number.isNaN(principal) || principal <= 0 || Number.isNaN(tenure) || tenure <= 0) {
+  if (!loanType || !loanRates[loanType] || Number.isNaN(principal) || principal <= 0 || Number.isNaN(tenure) || tenure <= 0) {
     return res.status(400).json({ success: false, error: 'Invalid loan payload' });
   }
 
-  const interestRate = LOAN_RATES[loanType];
+  const interestRate = loanRates[loanType];
   const monthlyPayment = principal * (interestRate / 100 / 12) + principal / tenure;
 
   const loan = await Loan.create({

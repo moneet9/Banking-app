@@ -61,8 +61,8 @@ export default function CashRequests() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="bg-gradient-to-br from-[#0066FF] to-[#004FCC] pt-6 pb-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 pb-20">
+      <div className="bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] pt-6 pb-8 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-4 mb-2">
             <button
@@ -109,7 +109,7 @@ export default function CashRequests() {
                 placeholder="Enter amount"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="h-12"
+                className="h-12 bg-[#E2E8F0] border-slate-300"
                 required
               />
             </div>
@@ -122,11 +122,15 @@ export default function CashRequests() {
                 placeholder="Add request note"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                className="h-12"
+                className="h-12 bg-[#E2E8F0] border-slate-300"
               />
             </div>
 
-            <Button type="submit" disabled={isSubmitting} className="w-full h-12 bg-[#0066FF] hover:bg-[#0052CC] text-white">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full h-12 bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] hover:from-[#1D4ED8] hover:to-[#1E40AF] text-white"
+            >
               {isSubmitting ? 'Sending...' : 'Send Request to Staff'}
             </Button>
           </form>

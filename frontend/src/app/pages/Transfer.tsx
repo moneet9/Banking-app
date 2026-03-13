@@ -40,9 +40,9 @@ export default function Transfer() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#0066FF] to-[#004FCC] pt-6 pb-8 px-4">
+      <div className="bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] pt-6 pb-8 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center gap-4 mb-2">
             <button 
@@ -91,7 +91,7 @@ export default function Transfer() {
                 placeholder="Enter email or phone number"
                 value={recipient}
                 onChange={(e) => setRecipient(e.target.value)}
-                className="h-14 bg-gray-50 border-gray-200 rounded-xl"
+                className="h-14 bg-[#E2E8F0] border-slate-300 rounded-xl"
                 required
               />
             </div>
@@ -110,7 +110,7 @@ export default function Transfer() {
                   placeholder="0.00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="h-14 bg-gray-50 border-gray-200 rounded-xl pl-10 text-2xl font-semibold"
+                  className="h-14 bg-[#E2E8F0] border-slate-300 rounded-xl pl-10 text-2xl font-semibold"
                   step="0.01"
                   min="0"
                   required
@@ -122,7 +122,7 @@ export default function Transfer() {
                     key={preset}
                     type="button"
                     onClick={() => setAmount(preset.toString())}
-                    className="px-4 py-2 bg-blue-50 text-[#0066FF] rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
+                    className="px-4 py-2 bg-blue-50 text-[#2563EB] rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
                   >
                     ₹{preset}
                   </button>
@@ -142,12 +142,12 @@ export default function Transfer() {
                 placeholder="Add a message"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                className="h-14 bg-gray-50 border-gray-200 rounded-xl"
+                className="h-14 bg-[#E2E8F0] border-slate-300 rounded-xl"
               />
             </div>
 
             {/* Summary */}
-            <div className="bg-blue-50 rounded-2xl p-4 space-y-2">
+            <div className="bg-white border border-blue-100 rounded-2xl p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Transfer Amount</span>
                 <span className="font-semibold text-gray-900">₹{amount || '0.00'}</span>
@@ -159,14 +159,14 @@ export default function Transfer() {
               <div className="h-px bg-gray-200 my-2" />
               <div className="flex justify-between">
                 <span className="font-semibold text-gray-900">Total</span>
-                <span className="font-bold text-[#0066FF] text-lg">₹{amount || '0.00'}</span>
+                <span className="font-bold text-[#2563EB] text-lg">₹{amount || '0.00'}</span>
               </div>
             </div>
 
             <Button 
               type="submit" 
               disabled={isSubmitting}
-              className="w-full h-14 bg-[#0066FF] hover:bg-[#0052CC] text-white rounded-xl font-semibold shadow-lg shadow-blue-500/30"
+              className="w-full h-14 bg-gradient-to-r from-[#2563EB] to-[#1D4ED8] hover:from-[#1D4ED8] hover:to-[#1E40AF] text-white rounded-xl font-semibold shadow-lg shadow-blue-300/40"
             >
               {isSubmitting ? 'Processing...' : 'Confirm Transfer'}
             </Button>

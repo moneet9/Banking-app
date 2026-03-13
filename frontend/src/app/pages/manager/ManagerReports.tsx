@@ -2,12 +2,28 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { ManagerSidebar } from '../../components/ManagerSidebar';
 import { Card } from '../../components/ui/card';
-import { TrendingUp, Users, FileText, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Users, FileText, CheckCircle2, AlertTriangle, TrendingUp, Wallet, PiggyBank, Percent } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+} from 'recharts';
 import { toast } from 'sonner';
-import { getManagerReports } from '../../services/bankingApi';
+import { getManagerReports, type ManagerReportsData } from '../../services/bankingApi';
 
-const emptyData = {
+const emptyData: ManagerReportsData = {
   role: 'manager',
   customerCount: 0,
   totalLoans: 0,
@@ -28,11 +44,21 @@ const emptyData = {
   customerGrowth: [],
 };
 
+interface LoanMixPoint {
+  name: string;
+  value: number;
+  color: string;
+}
+
 function formatINR(value: number) {
   return `₹${value.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 }
 
 function formatPercent(value: number) {
+  return `${value.toFixed(1)}%`;
+}
+
+function formatSignedPercent(value: number) {
   const sign = value >= 0 ? '+' : '';
   return `${sign}${value.toFixed(1)}%`;
 }
@@ -40,7 +66,7 @@ function formatPercent(value: number) {
 export default function ManagerReports() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
-  const [reports, setReports] = useState(emptyData);
+  const [reports, setReports] = useState<ManagerReportsData>(emptyData);
 
   useEffect(() => {
     const loadReports = async () => {
@@ -59,39 +85,87 @@ export default function ManagerReports() {
     loadReports();
   }, [navigate]);
 
-  const kpiCards = useMemo(
+  const pendingLoans = Math.max(reports.totalLoans - reports.approvedLoans - reports.rejectedLoans, 0);
+  const approvalRate = reports.totalLoans > 0 ? (reports.approvedLoans / reports.totalLoans) * 100 : 0;
+  const totalExpenses = useMemo(
+    () => reports.financialData.reduce<number>((sum, row) => sum + row.expenses, 0),
+    [reports.financialData]
+  );
+  const expenseRatio = reports.kpis.totalRevenue > 0 ? (totalExpenses / reports.kpis.totalRevenue) * 100 : 0;
+  const profitMargin = reports.kpis.totalRevenue > 0 ? (reports.kpis.netProfit / reports.kpis.totalRevenue) * 100 : 0;
+
+  const financialKpis = useMemo(
     () => [
       {
         label: 'Total Revenue',
         value: formatINR(reports.kpis.totalRevenue),
-        change: formatPercent(reports.kpis.totalRevenueChange),
+        helper: `Change: ${formatSignedPercent(reports.kpis.totalRevenueChange)}`,
         icon: TrendingUp,
-        positive: reports.kpis.totalRevenueChange >= 0,
+      },
+      {
+        label: 'Total Expenses',
+        value: formatINR(totalExpenses),
+        helper: `Expense Ratio: ${formatPercent(expenseRatio)}`,
+        icon: Wallet,
       },
       {
         label: 'Net Profit',
         value: formatINR(reports.kpis.netProfit),
-        change: formatPercent(reports.kpis.netProfitChange),
-        icon: TrendingUp,
-        positive: reports.kpis.netProfitChange >= 0,
+        helper: `Change: ${formatSignedPercent(reports.kpis.netProfitChange)}`,
+        icon: PiggyBank,
       },
       {
+        label: 'Profit Margin',
+        value: formatPercent(profitMargin),
+        helper: `Default Rate: ${formatPercent(reports.kpis.defaultRate)}`,
+        icon: Percent,
+      },
+    ],
+    [expenseRatio, profitMargin, reports, totalExpenses]
+  );
+
+  const operationalKpis = useMemo(
+    () => [
+      {
         label: 'Total Customers',
-        value: reports.kpis.totalCustomers.toLocaleString('en-IN'),
-        change: formatPercent(reports.kpis.totalCustomersChange),
+        value: reports.customerCount.toLocaleString('en-IN'),
+        helper: `Growth: ${formatSignedPercent(reports.kpis.totalCustomersChange)}`,
         icon: Users,
-        positive: reports.kpis.totalCustomersChange >= 0,
+      },
+      {
+        label: 'Total Loans',
+        value: reports.totalLoans.toLocaleString('en-IN'),
+        helper: `${reports.approvedLoans.toLocaleString('en-IN')} approved / ${reports.rejectedLoans.toLocaleString('en-IN')} rejected`,
+        icon: FileText,
+      },
+      {
+        label: 'Approval Rate',
+        value: formatPercent(approvalRate),
+        helper: `${pendingLoans.toLocaleString('en-IN')} pending`,
+        icon: CheckCircle2,
       },
       {
         label: 'Default Rate',
-        value: `${reports.kpis.defaultRate.toFixed(2)}%`,
-        change: formatPercent(reports.kpis.defaultRateChange),
-        icon: FileText,
-        positive: reports.kpis.defaultRateChange <= 0,
+        value: formatPercent(reports.kpis.defaultRate),
+        helper: `Change: ${formatSignedPercent(reports.kpis.defaultRateChange)}`,
+        icon: AlertTriangle,
       },
     ],
-    [reports]
+    [approvalRate, pendingLoans, reports]
   );
+
+  const loanMix = useMemo<LoanMixPoint[]>(
+    () => [
+      { name: 'Approved', value: reports.approvedLoans, color: '#16A34A' },
+      { name: 'Rejected', value: reports.rejectedLoans, color: '#DC2626' },
+      { name: 'Pending', value: pendingLoans, color: '#F59E0B' },
+    ].filter((item) => item.value > 0),
+    [pendingLoans, reports.approvedLoans, reports.rejectedLoans]
+  );
+
+  const loanMixData: LoanMixPoint[] = loanMix.length
+    ? loanMix
+    : [{ name: 'No Data', value: 1, color: '#D1D5DB' }];
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -101,62 +175,75 @@ export default function ManagerReports() {
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-8 py-6">
           <h1 className="text-3xl font-bold text-gray-900">Reports & Analytics</h1>
-          <p className="text-gray-600 mt-1">Comprehensive financial overview and performance metrics</p>
+          <p className="text-gray-600 mt-1">Unified financial and operational analytics in one place</p>
         </div>
 
         {/* Main Content */}
         <div className="p-8">
           {isLoading && <p className="text-sm text-gray-600 mb-4">Loading manager reports...</p>}
 
-          {/* KPI Cards */}
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Financial KPIs</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {kpiCards.map((kpi) => (
+            {financialKpis.map((kpi) => (
               <Card key={kpi.label} className="p-6 rounded-2xl bg-white border border-gray-200">
-                <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start justify-between mb-3">
                   <kpi.icon className="w-6 h-6 text-gray-600" />
-                  <div className={`flex items-center gap-1 text-sm font-semibold ${
-                    kpi.positive ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {kpi.positive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                    {kpi.change}
-                  </div>
                 </div>
                 <p className="text-3xl font-bold text-gray-900 mb-1">{kpi.value}</p>
                 <p className="text-sm text-gray-600">{kpi.label}</p>
+                <p className="text-xs text-gray-500 mt-2">{kpi.helper}</p>
               </Card>
             ))}
           </div>
 
-          {/* Financial Overview */}
+          <h2 className="text-lg font-bold text-gray-900 mb-4">Operational KPIs</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {operationalKpis.map((kpi) => (
+              <Card key={kpi.label} className="p-6 rounded-2xl bg-white border border-gray-200">
+                <div className="flex items-start justify-between mb-3">
+                  <kpi.icon className="w-6 h-6 text-gray-600" />
+                </div>
+                <p className="text-3xl font-bold text-gray-900 mb-1">{kpi.value}</p>
+                <p className="text-sm text-gray-600">{kpi.label}</p>
+                <p className="text-xs text-gray-500 mt-2">{kpi.helper}</p>
+              </Card>
+            ))}
+          </div>
+
           <Card className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Financial Overview (Last 6 Months)</h3>
-            <ResponsiveContainer width="100%" height={350}>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Revenue vs Expenses vs Profit</h3>
+            <ResponsiveContainer width="100%" height={360}>
               <AreaChart data={reports.financialData}>
                 <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#0066FF" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#0066FF" stopOpacity={0}/>
+                  <linearGradient id="unifiedRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563EB" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#2563EB" stopOpacity={0.02} />
                   </linearGradient>
-                  <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00C853" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#00C853" stopOpacity={0}/>
+                  <linearGradient id="unifiedExpenses" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#EA580C" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#EA580C" stopOpacity={0.02} />
+                  </linearGradient>
+                  <linearGradient id="unifiedProfit" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#16A34A" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#16A34A" stopOpacity={0.02} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" stroke="#666" />
                 <YAxis stroke="#666" />
-                <Tooltip 
+                <Tooltip
                   formatter={(value: number) => formatINR(value)}
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e0e0e0' }}
                 />
                 <Legend />
-                <Area type="monotone" dataKey="revenue" stroke="#0066FF" fillOpacity={1} fill="url(#colorRevenue)" name="Revenue" />
-                <Area type="monotone" dataKey="profit" stroke="#00C853" fillOpacity={1} fill="url(#colorProfit)" name="Profit" />
+                <Area type="monotone" dataKey="revenue" stroke="#2563EB" fillOpacity={1} fill="url(#unifiedRevenue)" name="Revenue" />
+                <Area type="monotone" dataKey="expenses" stroke="#EA580C" fillOpacity={1} fill="url(#unifiedExpenses)" name="Expenses" />
+                <Area type="monotone" dataKey="profit" stroke="#16A34A" fillOpacity={1} fill="url(#unifiedProfit)" name="Profit" />
               </AreaChart>
             </ResponsiveContainer>
           </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Loan Performance */}
             <Card className="bg-white rounded-2xl border border-gray-200 p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Loan Performance</h3>
@@ -186,6 +273,70 @@ export default function ManagerReports() {
                   <Line type="monotone" dataKey="customers" stroke="#AA00FF" strokeWidth={3} dot={{ r: 5 }} name="Total Customers" />
                 </LineChart>
               </ResponsiveContainer>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="bg-white rounded-2xl border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Current Loan Decision Mix</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={loanMixData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={110}
+                    dataKey="value"
+                  >
+                    {loanMixData.map((entry) => (
+                      <Cell key={entry.name} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </Card>
+
+            <Card className="bg-white rounded-2xl border border-gray-200 p-6 lg:col-span-2">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Monthly Financial Snapshot</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Month</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Revenue</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Expenses</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Profit</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {reports.financialData.map((row) => {
+                      const margin = row.revenue > 0 ? (row.profit / row.revenue) * 100 : 0;
+                      return (
+                        <tr key={row.month} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">{row.month}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700">{formatINR(row.revenue)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700">{formatINR(row.expenses)}</td>
+                          <td className={`px-4 py-3 text-sm font-semibold ${row.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatINR(row.profit)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700">{formatPercent(margin)}</td>
+                        </tr>
+                      );
+                    })}
+                    {!reports.financialData.length && !isLoading && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
+                          No financial history available yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </Card>
           </div>
         </div>

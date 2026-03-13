@@ -86,10 +86,6 @@ export default function ManagerLogin() {
             {isSubmitting ? 'Signing in...' : 'Sign In'}
           </Button>
         </form>
-
-        <p className="text-sm text-gray-500 text-center mt-6">
-          Demo credentials: manager@securebank.com / Password@123
-        </p>
       </Card>
     </div>
   );

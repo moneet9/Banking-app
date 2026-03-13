@@ -5,6 +5,8 @@ import User from './models/User.js';
 import Transaction from './models/Transaction.js';
 import Loan from './models/Loan.js';
 import CashRequest from './models/CashRequest.js';
+import LoanRate from './models/LoanRate.js';
+import { DEFAULT_LOAN_RATES } from './utils/loanRates.js';
 
 const DAY = 1000 * 60 * 60 * 24;
 
@@ -288,6 +290,14 @@ async function seed() {
     await User.deleteMany({ _id: { $in: existingUserIds } });
   }
 
+  await LoanRate.deleteMany({});
+  await LoanRate.insertMany(
+    Object.entries(DEFAULT_LOAN_RATES).map(([loanType, rate]) => ({
+      loanType,
+      rate,
+    }))
+  );
+
   const createdUsers = [];
   for (const user of SEED_USERS) {
     const created = await User.create({
@@ -320,6 +330,7 @@ async function seed() {
   console.log(`Users: ${createdUsers.length}`);
   console.log(`Transactions: ${transactions.length}`);
   console.log('Loans: 3 (pending, approved, rejected)');
+  console.log('Loan rates: personal, home, auto, business');
   console.log('Login with: rahul.kumar@email.com / Password@123');
   console.log('Staff login: staff@securebank.com / Password@123');
   console.log('Manager login: manager@securebank.com / Password@123');

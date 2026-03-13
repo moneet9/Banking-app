@@ -1,15 +1,15 @@
-import { ArrowUpRight, ArrowDownLeft, CreditCard, FileText, Eye, EyeOff } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, CreditCard, FileText, Eye, EyeOff, LogOut } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { getDashboard } from '../services/bankingApi';
+import { clearSession, getDashboard } from '../services/bankingApi';
 import { toast } from 'sonner';
 
 const quickActions = [
   { icon: ArrowDownLeft, label: 'Deposit', color: 'bg-green-500', route: '/cash-requests?type=deposit' },
   { icon: ArrowUpRight, label: 'Withdraw', color: 'bg-orange-500', route: '/cash-requests?type=withdrawal' },
-  { icon: CreditCard, label: 'Transfer', color: 'bg-blue-500', route: '/transfer' },
+  { icon: CreditCard, label: 'Transfer', color: 'bg-[#2563EB]', route: '/transfer' },
   { icon: FileText, label: 'Loans', color: 'bg-purple-500', route: '/loans' },
 ];
 
@@ -54,22 +54,37 @@ export default function Dashboard() {
     load();
   }, [navigate]);
 
+  const handleLogout = () => {
+    clearSession();
+    toast.success('Logged out successfully');
+    navigate('/');
+  };
+
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50 to-blue-100 pb-20">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#0066FF] to-[#004FCC] pt-12 pb-32 px-4">
+      <div className="bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] pt-12 pb-32 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div>
               <p className="text-blue-100 text-sm mb-1">Welcome back,</p>
               <h1 className="text-2xl font-bold text-white">{userName}</h1>
             </div>
-            <button 
-              className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center"
-              onClick={() => navigate('/profile')}
-            >
-              <span className="text-2xl">👤</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center"
+                onClick={() => navigate('/profile')}
+              >
+                <span className="text-2xl">👤</span>
+              </button>
+              <button
+                className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center"
+                onClick={handleLogout}
+                aria-label="Logout"
+              >
+                <LogOut className="w-5 h-5 text-white" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -126,7 +141,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-4 px-1">
             <h2 className="text-lg font-semibold text-gray-900">Recent Transactions</h2>
             <button 
-              className="text-sm text-[#0066FF] font-medium"
+              className="text-sm text-[#2563EB] font-medium"
               onClick={() => navigate('/passbook')}
             >
               See All

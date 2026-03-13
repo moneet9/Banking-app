@@ -23,7 +23,7 @@ const roles = [
   {
     id: 'manager',
     title: 'Manager',
-    description: 'Final approvals, analytics, and financial overview',
+    description: 'Final approvals and unified reports analytics',
     icon: Shield,
     color: 'bg-green-500',
     route: '/manager/login',

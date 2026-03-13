@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ManagerSidebar } from '../../components/ManagerSidebar';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Search, CheckCircle, XCircle } from 'lucide-react';
+import { Search, CheckCircle, XCircle, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  getManagerLoanRates,
+  updateManagerLoanRates,
+  type LoanRateItem,
+  type LoanType,
+} from '../../services/bankingApi';
 
 const pendingLoans = [
   { 
@@ -54,9 +60,52 @@ const pendingLoans = [
   },
 ];
 
+const loanTypeLabels: Record<LoanType, string> = {
+  personal: 'Personal Loan',
+  home: 'Home Loan',
+  auto: 'Auto Loan',
+  business: 'Business Loan',
+};
+
+const defaultRateState: Record<LoanType, string> = {
+  personal: '8.5',
+  home: '6.5',
+  auto: '7.2',
+  business: '9.5',
+};
+
+function normalizeRateState(items: LoanRateItem[]) {
+  const next = { ...defaultRateState };
+
+  items.forEach((item) => {
+    next[item.loanType] = String(item.rate);
+  });
+
+  return next;
+}
+
 export default function ManagerLoans() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLoan, setSelectedLoan] = useState<typeof pendingLoans[0] | null>(null);
+  const [loanRates, setLoanRates] = useState<Record<LoanType, string>>(defaultRateState);
+  const [isRatesLoading, setIsRatesLoading] = useState(true);
+  const [isSavingRates, setIsSavingRates] = useState(false);
+
+  useEffect(() => {
+    const loadLoanRates = async () => {
+      try {
+        setIsRatesLoading(true);
+        const data = await getManagerLoanRates();
+        setLoanRates(normalizeRateState(data));
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to load loan rates');
+      } finally {
+        setIsRatesLoading(false);
+      }
+    };
+
+    loadLoanRates();
+  }, []);
 
   const filteredLoans = pendingLoans.filter(loan =>
     loan.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -73,6 +122,40 @@ export default function ManagerLoans() {
     setSelectedLoan(null);
   };
 
+  const handleRateInputChange = (loanType: LoanType, value: string) => {
+    setLoanRates((prev) => ({
+      ...prev,
+      [loanType]: value,
+    }));
+  };
+
+  const handleSaveRates = async () => {
+    try {
+      const payload = (Object.keys(loanTypeLabels) as LoanType[]).reduce(
+        (acc, loanType) => {
+          const numericRate = Number(loanRates[loanType]);
+
+          if (!Number.isFinite(numericRate) || numericRate <= 0 || numericRate > 100) {
+            throw new Error(`${loanTypeLabels[loanType]} must be a valid rate between 0 and 100`);
+          }
+
+          acc[loanType] = Number(numericRate.toFixed(2));
+          return acc;
+        },
+        {} as Record<LoanType, number>
+      );
+
+      setIsSavingRates(true);
+      const updated = await updateManagerLoanRates(payload);
+      setLoanRates(normalizeRateState(updated));
+      toast.success('Loan interest rates updated');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update rates');
+    } finally {
+      setIsSavingRates(false);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50">
       <ManagerSidebar />
@@ -86,6 +169,52 @@ export default function ManagerLoans() {
 
         {/* Main Content */}
         <div className="p-8">
+          <Card className="bg-white rounded-2xl border border-gray-200 p-6 mb-6">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <SlidersHorizontal className="w-5 h-5" />
+                  Loan Interest Rate Settings
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  These rates are applied to all new customer loan applications.
+                </p>
+              </div>
+              <Button
+                onClick={handleSaveRates}
+                disabled={isRatesLoading || isSavingRates}
+                className="bg-green-500 hover:bg-green-600 text-white rounded-xl"
+              >
+                {isSavingRates ? 'Saving...' : 'Save Rates'}
+              </Button>
+            </div>
+
+            {isRatesLoading && <p className="text-sm text-gray-500 mb-4">Loading loan rates...</p>}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {(Object.keys(loanTypeLabels) as LoanType[]).map((loanType) => (
+                <div key={loanType}>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{loanTypeLabels[loanType]}</label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      min="0.1"
+                      max="100"
+                      step="0.1"
+                      value={loanRates[loanType]}
+                      onChange={(event) => handleRateInputChange(loanType, event.target.value)}
+                      className="pr-16 rounded-xl"
+                      disabled={isRatesLoading || isSavingRates}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500 font-medium">
+                      % p.a.
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
           {/* Search */}
           <div className="mb-6">
             <div className="relative max-w-md">
