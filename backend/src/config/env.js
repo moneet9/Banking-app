@@ -11,6 +11,7 @@ const env = {
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean),
+  openaiApiKey: process.env.OPENAI_API_KEY || '',
 };
 
 export default env;
