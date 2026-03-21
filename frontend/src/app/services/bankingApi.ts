@@ -426,3 +426,41 @@ export async function updateManagerLoanRates(rates: Partial<Record<LoanType, num
     body: JSON.stringify({ rates }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Agent API
+// ---------------------------------------------------------------------------
+
+export interface AgentChatResult {
+  reply: string;
+  toolsUsed: string[];
+  mode: 'openai' | 'rule-based';
+}
+
+export interface AgentTrace {
+  agent: string;
+  delegatedTask?: string;
+  result?: string;
+}
+
+export interface MultiAgentChatResult {
+  reply: string;
+  agentTrace: AgentTrace[];
+  mode: 'openai' | 'rule-based';
+}
+
+/** Send a message to the single Banking Chatbot Agent. */
+export async function sendAgentMessage(message: string) {
+  return request<AgentChatResult>('/agent/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+}
+
+/** Send a message to the Multi-Agent Banking System. */
+export async function sendMultiAgentMessage(message: string) {
+  return request<MultiAgentChatResult>('/agent/multi-chat', {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+}

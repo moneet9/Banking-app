@@ -5,6 +5,7 @@ import authRoutes from './routes/authRoutes.js';
 import bankingRoutes from './routes/bankingRoutes.js';
 import staffRoutes from './routes/staffRoutes.js';
 import managerRoutes from './routes/managerRoutes.js';
+import agentRoutes from './routes/agentRoutes.js';
 
 const app = express();
 
@@ -79,6 +80,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/banking', bankingRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/manager', managerRoutes);
+app.use('/api/agent', agentRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, error: 'Route not found' });
