@@ -231,7 +231,7 @@ export interface UIState {
   drawerContent: DrawerContent | null;
 }
 
-export type ModalType = 'createGroup' | 'editGroup' | 'profile' | 'settings';
+export type ModalType = 'createGroup' | 'editGroup' | 'profile' | 'settings' | 'customerChatbot';
 export type DrawerContent = 'groupMembers' | 'chatInfo' | 'profile';
 
 // ============================================================================

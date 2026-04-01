@@ -27,6 +27,7 @@ import ManagerLoans from './pages/manager/ManagerLoans';
 import ManagerReports from './pages/manager/ManagerReports';
 import ManagerPassbookLogs from './pages/manager/ManagerPassbookLogs';
 import ManagerStaffLogs from './pages/manager/ManagerStaffLogs';
+import ManagerAdvisor from './pages/manager/ManagerAdvisor';
 import { getUserRole, isAuthenticated } from './services/bankingApi';
 
 function RequireAuth() {
@@ -165,6 +166,10 @@ export const router = createBrowserRouter([
           {
             path: 'reports',
             element: <ManagerReports />,
+          },
+          {
+            path: 'advisor',
+            element: <ManagerAdvisor />,
           },
           {
             path: 'passbook-logs',

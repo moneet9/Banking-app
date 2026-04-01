@@ -1,9 +1,10 @@
-import { ArrowUpRight, ArrowDownLeft, CreditCard, FileText, Eye, EyeOff, LogOut } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, CreditCard, FileText, Eye, EyeOff, LogOut, Bot } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { clearSession, getDashboard } from '../services/bankingApi';
+import { useUIStore } from '../store/useUIStore';
 import { toast } from 'sonner';
 
 const quickActions = [
@@ -15,6 +16,7 @@ const quickActions = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { openModal } = useUIStore();
   const [showBalance, setShowBalance] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [userName, setUserName] = useState('Customer');
@@ -64,8 +66,18 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 pb-20">
       {/* Header */}
       <div className="bg-gradient-to-br from-[#2563EB] to-[#1D4ED8] pt-12 pb-32 px-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
+        <div className="max-w-2xl mx-auto relative">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => openModal('customerChatbot')}
+            className="absolute right-0 top-0 z-20 h-12 w-12 rounded-full border border-white/20 bg-white/15 text-white shadow-lg shadow-blue-950/20 backdrop-blur-sm transition-transform hover:-translate-y-0.5 hover:bg-white/25"
+            aria-label="Open financial assistant"
+          >
+            <Bot className="h-5 w-5" />
+          </Button>
+
+          <div className="flex items-center justify-between mb-8 pr-16">
             <div>
               <p className="text-blue-100 text-sm mb-1">Welcome back,</p>
               <h1 className="text-2xl font-bold text-white">{userName}</h1>

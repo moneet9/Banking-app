@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router';
-import { LayoutDashboard, FileCheck, BarChart3, ClipboardList, BookOpen, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileCheck, BarChart3, ClipboardList, BookOpen, Bot, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 const menuItems = [
@@ -8,6 +8,7 @@ const menuItems = [
   { icon: BookOpen, label: 'Passbook Logs', path: '/manager/passbook-logs' },
   { icon: ClipboardList, label: 'Staff Logs', path: '/manager/staff-logs' },
   { icon: BarChart3, label: 'Reports & Analytics', path: '/manager/reports' },
+  { icon: Bot, label: 'AI Advisor', path: '/manager/advisor' },
 ];
 
 export function ManagerSidebar() {
