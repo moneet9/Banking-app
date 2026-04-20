@@ -1,5 +1,18 @@
 # Banking App (Frontend + Backend)
 
+## Abstract
+
+This project is a full-stack banking application designed to simulate core banking operations in a secure and role-driven environment.
+It provides three distinct user roles — Customer, Staff, and Manager — each with tailored access and functionality.
+Customers can manage their accounts, initiate fund transfers, apply for loans, and view detailed transaction histories.
+Staff members handle cash request workflows, reviewing and approving or rejecting customer deposit and withdrawal requests.
+Managers gain access to analytics dashboards and comprehensive reports generated from live backend data.
+The backend is built with Node.js and Express, using MongoDB Atlas as the database and JWT for stateless authentication.
+The frontend is developed with React and Vite, offering a responsive and intuitive interface for all user roles.
+Role-based access control (RBAC) is enforced at both the API and UI levels to ensure data security and separation of concerns.
+The application supports LAN-based access, making it suitable for local network demonstrations and development environments.
+Overall, this project demonstrates a practical, production-oriented approach to building secure, scalable, and maintainable banking software.
+
 Full-stack banking application with role-based access control (Customer, Staff, Manager), MongoDB backend, and React frontend.
 
 ## Project Structure
